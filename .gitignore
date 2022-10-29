@@ -1,0 +1,4 @@
+**/__pycache/
+.idea/
+*.session
+*.pickle
