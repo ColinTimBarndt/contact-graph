@@ -13,3 +13,5 @@ To export your Telegram data, run the according shell script. It is going to log
 your chat and group relations to a pickle file.
 
 To display a graph of the generated `telegram.pickle`, run `python3 visualize.py`.
+
+You can customize the main method in the visualize python file for your needs.

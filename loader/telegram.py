@@ -1,5 +1,4 @@
 import asyncio
-import pickle
 from dataclasses import dataclass
 from typing import Optional, Union, Dict
 from telethon import TelegramClient
@@ -80,9 +79,14 @@ class TelegramLoader:
         if self._client is None:
             raise Exception('Not connected')
 
+        me = await self._client.get_me(True)
+        me = me.user_id
+
         users: Dict[int, PlatformContact] = dict()
 
-        def add_user(user: User) -> PlatformContact:
+        def add_user(user: User) -> Optional[PlatformContact]:
+            if user.id == me:
+                return None
             if user.id not in users:
                 contact = PLATFORM.contact()
                 if user.first_name is not None and not user.first_name.isspace():
@@ -98,15 +102,20 @@ class TelegramLoader:
 
         async for dialog in self._client.iter_dialogs():
             entity: Union[User, Channel] = dialog.entity
+
             if isinstance(entity, User):
-                add_user(entity).personal = True
+                added = add_user(entity)
+                if added is not None:
+                    added.personal = True
 
             elif isinstance(entity, Channel):
                 channel: Channel = entity
-                community = PLATFORM.community(str(channel.id), channel.title)
+                community = PLATFORM.community(str(channel.id), channel.title, personal=True)
                 try:
-                    async for user in self._client.iter_participants(channel):
-                        add_user(user).add_community(community)
+                    async for participant in self._client.iter_participants(channel):
+                        added = add_user(participant)
+                        if added is not None:
+                            added.add_community(community)
                 except ChatAdminRequiredError:
                     pass
         return [users[uid] for uid in users]

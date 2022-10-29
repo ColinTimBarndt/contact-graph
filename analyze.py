@@ -1,4 +1,3 @@
-from typing import Tuple, Union, Any, Iterable
 import networkx as nx
 
 from data import PlatformContact, Contact, PlatformCommunity
@@ -56,18 +55,28 @@ class GraphBuilder:
                     self.contact_by_name[name] = contact
                 for phone in pc.phones:
                     self.contact_by_phone[phone] = contact
+        return self
 
-    def build(self) -> nx.Graph:
+    def build(self, *, usernames=True, personal_only=False) -> nx.Graph:
         graph = nx.Graph()
         graph.add_node("ME", type='me', name='me')
 
         for comm in self.communities:
+            if personal_only and not comm.personal:
+                continue
             graph.add_node(comm, name=comm.name)
+            if comm.personal:
+                graph.add_edge("ME", comm)
 
         for contact in self.contacts:
+            if personal_only and not contact.personal:
+                continue
             if len(contact.communities) < 2:
                 continue
-            graph.add_node(contact, name=max(contact.names, key=len, default='UNKNOWN'))
+            if usernames:
+                graph.add_node(contact, name=max(contact.names, key=len, default='UNKNOWN')[0:20])
+            else:
+                graph.add_node(contact, name='')
             if contact.personal:
                 graph.add_edge("ME", contact, personal=True)
             for comm in contact.communities:
